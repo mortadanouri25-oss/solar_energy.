@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>حاسبة ومصمم منظومات الطاقة الشمسية الاحترافية | Solar PV System Designer</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        solar: {
+                            50: '#fffbeed',
+                            100: '#fff3c4',
+                            400: '#facc15',
+                            500: '#eab308',
+                            600: '#ca8a04',
+                            900: '#713f12',
+                        },
+                        darkbg: '#0f172a',
+                        cardbg: '#1e293b',
+                        bordercolor: '#334155'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Cairo', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts: Cairo & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Cairo', 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        /* Print CSS optimization */
+        @media print {
+            body {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+                font-size: 11pt;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            .card-box {
+                background-color: #ffffff !important;
+                border: 1px solid #cccccc !important;
+                color: #000000 !important;
+                box-shadow: none !important;
+                break-inside: avoid;
+            }
+            .text-white, .text-slate-200, .text-slate-300, .text-slate-400 {
+                color: #111111 !important;
+            }
+            .bg-slate-800, .bg-slate-900, .bg-slate-950, .bg-slate-800\/50 {
+                background-color: #f8fafc !important;
+            }
+            .border-slate-700, .border-slate-800 {
+                border-color: #cbd5e1 !important;
+            }
+            canvas {
+                max-height: 280px !important;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between antialiased selection:bg-solar-500 selection:text-black">
+
+    <!-- Header / Navigation Bar -->
+    <header class="bg-slate-900/85 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50 no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-solar-500/10 text-solar-400 rounded-xl border border-solar-500/20">
+                    <i class="fa-solid fa-solar-panel text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight text-slate-100" id="app-title">مصمم منظومات الطاقة الشمسية</h1>
+                    <p class="text-xs text-slate-400" id="app-subtitle">Solar PV Professional Designer & Calculator</p>
+                </div>
+            </div>
+
+            <!-- Language and Action Tools -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- JSON Import/Export Buttons -->
+                <button onclick="exportJSON()" class="p-2 sm:px-3 sm:py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs sm:text-sm rounded-lg transition border border-slate-700 flex items-center gap-1.5" title="Export Data">
+                    <i class="fa-solid fa-download"></i>
+                    <span class="hidden sm:inline" data-i18n="export">تصدير JSON</span>
+                </button>
+                <label class="p-2 sm:px-3 sm:py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs sm:text-sm rounded-lg transition border border-slate-700 flex items-center gap-1.5 cursor-pointer" title="Import Data">
+                    <i class="fa-solid fa-upload"></i>
+                    <span class="hidden sm:inline" data-i18n="import">استيراد JSON</span>
+                    <input type="file" id="json-input" accept=".json" class="hidden" onchange="importJSON(event)">
+                </label>
+
+                <!-- PDF Print Button -->
+                <button onclick="triggerPrint()" class="px-3 py-1.5 bg-solar-500 hover:bg-solar-600 text-slate-950 font-semibold text-xs sm:text-sm rounded-lg transition flex items-center gap-1.5 shadow-lg shadow-solar-500/10">
+                    <i class="fa-solid fa-file-pdf text-base"></i>
+                    <span data-i18n="print_pdf">طباعة التقرير (PDF)</span>
+                </button>
+
+                <!-- Language Toggle Button -->
+                <button onclick="toggleLanguage()" class="p-2 text-slate-300 hover:text-solar-400 bg-slate-800 rounded-lg border border-slate-700 transition text-xs font-bold" title="Switch Language">
+                    <i class="fa-solid fa-language text-lg"></i>
+                    <span id="lang-indicator" class="ms-1 font-bold">EN</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow w-full">
+
+        <!-- General System Status Banner -->
+        <div id="system-status-banner" class="mb-6 p-4 rounded-xl border flex items-start gap-4 transition-all duration-300">
+            <div id="status-icon-container" class="p-2 rounded-lg text-xl flex-shrink-0">
+                <i id="status-icon" class="fa-solid fa-shield-halved"></i>
+            </div>
+            <div class="flex-grow">
+                <h3 id="status-title" class="font-bold text-base mb-1">حالة التوافق الفني للمنظومة</h3>
+                <p id="status-description" class="text-sm opacity-90">يتم فحص المعايير والتوافق الكهربائي بانتظام...</p>
+                <ul id="status-issues-list" class="mt-2 text-xs list-disc list-inside space-y-1 hidden"></ul>
+            </div>
+        </div>
+
+        <!-- Top KPIs Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+            <!-- Array Power -->
+            <div class="card-box bg-slate-800/80 p-3.5 rounded-xl border border-slate-700/80 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+                    <span data-i18n="kpi_array_power">قدرة الألواح</span>
+                    <i class="fa-solid fa-solar-panel text-solar-400"></i>
+                </div>
+                <div class="text-xl font-extrabold text-slate-100" id="kpi-array-power">0.00 <span class="text-xs font-normal text-slate-400">kWp</span></div>
+                <div class="text-[11px] text-slate-400 mt-1" id="kpi-total-modules">0 لوح شمسية</div>
+            </div>
+
+            <!-- Daily Generation -->
+            <div class="card-box bg-slate-800/80 p-3.5 rounded-xl border border-slate-700/80 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+                    <span data-i18n="kpi_daily_gen">الإنتاج اليومي للألواح</span>
+                    <i class="fa-solid fa-sun text-amber-400"></i>
+                </div>
+                <div class="text-xl font-extrabold text-amber-400" id="kpi-daily-gen">0.00 <span class="text-xs font-normal text-slate-400">kWh</span></div>
+                <div class="text-[11px] text-slate-400 mt-1" id="kpi-gen-eff">كفاءة الأداء: 82%</div>
+            </div>
+
+            <!-- Array Current -->
+            <div class="card-box bg-slate-800/80 p-3.5 rounded-xl border border-slate-700/80 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+                    <span data-i18n="kpi_array_current">تيار القصر Isc</span>
+                    <i class="fa-solid fa-bolt text-yellow-400"></i>
+                </div>
+                <div class="text-xl font-extrabold text-slate-100" id="kpi-array-isc">0.00 <span class="text-xs font-normal text-slate-400">A</span></div>
+                <div class="text-[11px] text-slate-400 mt-1" id="kpi-imp-val">Imp: 0.00 A</div>
+            </div>
+
+            <!-- Battery Capacity -->
+            <div class="card-box bg-slate-800/80 p-3.5 rounded-xl border border-slate-700/80 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+                    <span data-i18n="kpi_batt_cap">سعة البطاريات</span>
+                    <i class="fa-solid fa-car-battery text-emerald-400"></i>
+                </div>
+                <div class="text-xl font-extrabold text-slate-100" id="kpi-batt-cap">0.00 <span class="text-xs font-normal text-slate-400">kWh</span></div>
+                <div class="text-[11px] text-slate-400 mt-1" id="kpi-batt-ah">0 Ah @ 0V</div>
+            </div>
+
+            <!-- Effective Battery Cap -->
+            <div class="card-box bg-slate-800/80 p-3.5 rounded-xl border border-slate-700/80 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+                    <span data-i18n="kpi_usable_batt">السعة الفعالة</span>
+                    <i class="fa-solid fa-battery-three-quarters text-teal-400"></i>
+                </div>
+                <div class="text-xl font-extrabold text-slate-100" id="kpi-usable-batt">0.00 <span class="text-xs font-normal text-slate-400">kWh</span></div>
+                <div class="text-[11px] text-slate-400 mt-1" id="kpi-dod-val">DoD: 0%</div>
+            </div>
+
+            <!-- Area Required -->
+            <div class="card-box bg-slate-800/80 p-3.5 rounded-xl border border-slate-700/80 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+                    <span data-i18n="kpi_area">المساحة المطلوبة</span>
+                    <i class="fa-solid fa-ruler-combined text-blue-400"></i>
+                </div>
+                <div class="text-xl font-extrabold text-slate-100" id="kpi-area">0.0 <span class="text-xs font-normal text-slate-400">m²</span></div>
+                <div class="text-[11px] text-slate-400 mt-1" id="kpi-area-est">حقيقية + مسافة منع الظل</div>
+            </div>
+
+            <!-- Battery Config String -->
+            <div class="card-box bg-slate-800/80 p-3.5 rounded-xl border border-slate-700/80 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+                    <span data-i18n="kpi_batt_config">توصيل البطاريات</span>
+                    <i class="fa-solid fa-network-wired text-purple-400"></i>
+                </div>
+                <div class="text-xl font-extrabold text-slate-100" id="kpi-batt-config">0S x 0P</div>
+                <div class="text-[11px] text-slate-400 mt-1" id="kpi-batt-count">المجموع: 0 بطارية</div>
+            </div>
+        </div>
+
+        <!-- Grid Layout for Inputs & Configurations -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- Left Column: Inputs (7 Columns) -->
+            <div class="lg:col-span-7 space-y-6">
+
+                <!-- System Config & PSH -->
+                <div class="card-box bg-slate-800 p-5 rounded-2xl border border-slate-700/80 shadow-md">
+                    <h2 class="text-lg font-bold text-slate-100 mb-4 flex items-center gap-2 border-b border-slate-700 pb-2">
+                        <i class="fa-solid fa-sliders text-solar-400"></i>
+                        <span data-i18n="sec_system_config">إعدادات المنظومة والموقع</span>
+                    </h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1" data-i18n="lbl_sys_type">نوع المنظومة الشمسية</label>
+                            <select id="sys-type" onchange="handleSystemTypeChange()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-solar-500">
+                                <option value="off-grid" data-i18n="opt_offgrid">منفصلة عن الشبكة (Off-Grid)</option>
+                                <option value="hybrid" selected data-i18n="opt_hybrid">هجينة (Hybrid)</option>
+                                <option value="on-grid" data-i18n="opt_ongrid">مرتبطة بالشبكة (On-Grid)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1" data-i18n="lbl_psh">ساعات الإشعاع الشمسي (PSH)</label>
+                            <div class="relative">
+                                <input type="text" id="psh-input" value="" placeholder="مثال: 5.5" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-solar-500">
+                                <span class="absolute end-3 top-2.5 text-xs text-slate-400">Hours/Day</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Performance Efficiency Breakdown & Safety Factors Section -->
+                    <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider mt-5 mb-3 border-t border-slate-700/60 pt-3 flex items-center gap-1.5">
+                        <i class="fa-solid fa-gears text-solar-400"></i>
+                        <span data-i18n="sec_efficiency_factors">معاملات الأداء، كفاءة المنظومة، ومعاملات الأمان</span>
+                    </h3>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                        <div>
+                            <label class="block text-slate-400 mb-1" data-i18n="lbl_eff_inv">كفاءة الإنفيرتر (%)</label>
+                            <input type="text" id="eff-inverter" value="95" placeholder="مثال: 95" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-slate-100">
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1" data-i18n="lbl_eff_batt">كفاءة الشحن/التفريغ (%)</label>
+                            <input type="text" id="eff-battery" value="90" placeholder="مثال: 90" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-slate-100">
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1" data-i18n="lbl_eff_panel">كفاءة الألواح (%)</label>
+                            <input type="text" id="eff-panel" value="90" placeholder="مثال: 90" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-slate-100">
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1 font-bold text-solar-400" data-i18n="lbl_isc_safety">معامل أمان تيار Isc</label>
+                            <input type="text" id="isc-safety-factor" value="1.25" placeholder="مثال: 1.25" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-solar-500/50 rounded-lg px-2 py-1 text-slate-100">
+                        </div>
+                    </div>
+                    <div class="mt-3 flex items-center justify-between text-xs text-slate-400 bg-slate-900/60 p-2.5 rounded-lg border border-slate-700/60">
+                        <span data-i18n="lbl_total_perf_eff">إجمالي كفاءة الأداء الكلية (PR):</span>
+                        <span id="total-perf-eff-val" class="font-bold text-solar-400 text-sm">0.82</span>
+                    </div>
+                </div>
+
+                <!-- Dynamic Loads Table -->
+                <div class="card-box bg-slate-800 p-5 rounded-2xl border border-slate-700/80 shadow-md">
+                    <div class="flex items-center justify-between border-b border-slate-700 pb-2 mb-4">
+                        <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-plug text-solar-400"></i>
+                            <span data-i18n="sec_loads">جدول الأحمال الكهربائية</span>
+                        </h2>
+                        <button onclick="addLoadRow()" class="px-3 py-1 bg-solar-500/10 hover:bg-solar-500/20 text-solar-400 text-xs font-semibold rounded-lg border border-solar-500/30 transition flex items-center gap-1">
+                            <i class="fa-solid fa-plus"></i>
+                            <span data-i18n="btn_add_load">إضافة جهاز</span>
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-start text-xs">
+                            <thead class="text-slate-400 border-b border-slate-700 bg-slate-900/50">
+                                <tr>
+                                    <th class="p-2 text-start" data-i18n="th_device">اسم الجهاز</th>
+                                    <th class="p-2 text-center" data-i18n="th_power">القدرة (Watt)</th>
+                                    <th class="p-2 text-center" data-i18n="th_qty">العدد</th>
+                                    <th class="p-2 text-center" data-i18n="th_hours">ساعات التشغيل</th>
+                                    <th class="p-2 text-center" data-i18n="th_kwh">الاستهلاك (kWh)</th>
+                                    <th class="p-2 text-center no-print">حذف</th>
+                                </tr>
+                            </thead>
+                            <tbody id="loads-tbody" class="divide-y divide-slate-700/50">
+                                <!-- Dynamic rows inserted by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-slate-700/80 flex flex-wrap justify-between items-center text-xs sm:text-sm font-semibold bg-slate-900/40 p-3 rounded-xl">
+                        <div class="text-slate-300">
+                            <span data-i18n="lbl_total_daily_energy">إجمالي الاستهلاك اليومي:</span>
+                            <span id="total-daily-kwh" class="text-solar-400 font-bold text-base ms-1">0.00</span> kWh/day
+                        </div>
+                        <div class="text-slate-300">
+                            <span data-i18n="lbl_peak_power">القدرة الذروية المطلوبة:</span>
+                            <span id="total-peak-kw" class="text-solar-400 font-bold text-base ms-1">0.00</span> kW
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Solar Panels Specifications (STC) & Dimensions -->
+                <div class="card-box bg-slate-800 p-5 rounded-2xl border border-slate-700/80 shadow-md">
+                    <h2 class="text-lg font-bold text-slate-100 mb-4 flex items-center gap-2 border-b border-slate-700 pb-2">
+                        <i class="fa-solid fa-sun text-solar-400"></i>
+                        <span data-i18n="sec_pv_spec">مواصفات الألواح والتوصيل (STC) والأبعاد</span>
+                    </h2>
+                    
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1" data-i18n="lbl_pv_power">قدرة اللوح (Wp)</label>
+                            <input type="text" id="pv-pmax" value="" placeholder="مثال: 550" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-solar-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1" data-i18n="lbl_pv_voc">جهد الدائرة المفتوحة Voc (V)</label>
+                            <input type="text" id="pv-voc" value="" placeholder="مثال: 49.8" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-solar-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1" data-i18n="lbl_pv_isc">تيار قصر الدائرة Isc (A)</label>
+                            <input type="text" id="pv-isc" value="" placeholder="مثال: 13.9" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-solar-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1" data-i18n="lbl_pv_vmp">جهد أقصى قدرة Vmp (V)</label>
+                            <input type="text" id="pv-vmp" value="" placeholder="مثال: 41.9" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-solar-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1" data-i18n="lbl_pv_imp">تيار أقصى قدرة Imp (A)</label>
+                            <input type="text" id="pv-imp" value="" placeholder="مثال: 13.1" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-solar-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1" data-i18n="lbl_pv_tc">معامل الجهد الحراري (%/°C)</label>
+                            <input type="text" id="pv-tc-voc" value="" placeholder="مثال: -0.27" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-solar-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-solar-400 mb-1" data-i18n="lbl_series_modules">عدد الألواح بالسلسلة (S)</label>
+                            <input type="text" id="pv-series" value="" placeholder="مثال: 10" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-solar-500/50 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-solar-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-solar-400 mb-1" data-i18n="lbl_parallel_strings">عدد السلاسل بالتوازي (P)</label>
+                            <input type="text" id="pv-parallel" value="" placeholder="مثال: 2" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-solar-500/50 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-solar-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1" data-i18n="lbl_pv_length">طول اللوح (متر)</label>
+                            <input type="text" id="pv-length" value="" placeholder="مثال: 2.27" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-solar-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1" data-i18n="lbl_pv_width">عرض اللوح (متر)</label>
+                            <input type="text" id="pv-width" value="" placeholder="مثال: 1.13" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-solar-500">
+                        </div>
+                        <div class="col-span-2 sm:col-span-2">
+                            <label class="block text-xs text-slate-300 mb-1" data-i18n="lbl_shading_factor">معامل مسافة تباعد الصفوف لمنع الظلال</label>
+                            <input type="text" id="pv-shading-factor" value="" placeholder="مثال: 1.5 (افتراضي)" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-solar-500">
+                        </div>
+                    </div>
+
+                    <!-- Seasonal Maximum Temperatures Sub-section -->
+                    <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider mt-5 mb-3 border-t border-slate-700/60 pt-3 flex items-center gap-1.5">
+                        <i class="fa-solid fa-temperature-arrow-up text-solar-400"></i>
+                        <span data-i18n="sec_temps">أقصى درجات حرارة متوقعة في الموسم (°C)</span>
+                    </h3>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                        <div>
+                            <label class="block text-slate-400 mb-1" data-i18n="temp_summer">أقصى صيفاً (Summer Max)</label>
+                            <input type="text" id="temp-summer" value="" placeholder="مثال: 50" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-slate-100">
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1" data-i18n="temp_spring">أقصى ربيعاً (Spring Max)</label>
+                            <input type="text" id="temp-spring" value="" placeholder="مثال: 35" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-slate-100">
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1" data-i18n="temp_autumn">أقصى خريفاً (Autumn Max)</label>
+                            <input type="text" id="temp-autumn" value="" placeholder="مثال: 38" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-slate-100">
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1" data-i18n="temp_winter">أقصى شتاءً (Winter Max)</label>
+                            <input type="text" id="temp-winter" value="" placeholder="مثال: 20" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-slate-100">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inverter Specifications -->
+                <div class="card-box bg-slate-800 p-5 rounded-2xl border border-slate-700/80 shadow-md">
+                    <h2 class="text-lg font-bold text-slate-100 mb-4 flex items-center gap-2 border-b border-slate-700 pb-2">
+                        <i class="fa-solid fa-microchip text-solar-400"></i>
+                        <span data-i18n="sec_inverter_spec">مواصفات الإنفيرتر (Inverter Specs)</span>
+                    </h2>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-solar-400 mb-1" data-i18n="lbl_inv_official_power">قدرة الانفيرتر الرسمية (kW)</label>
+                            <input type="text" id="inv-official-power" value="" placeholder="مثال: 8" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-solar-500/50 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-solar-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1" data-i18n="lbl_inv_max_vdc">أقصى جهد مستمر Max Vdc (V)</label>
+                            <input type="text" id="inv-max-vdc" value="" placeholder="مثال: 500" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-solar-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1" data-i18n="lbl_inv_mppt_min">أقل جهد MPPT Min (V)</label>
+                            <input type="text" id="inv-mppt-min" value="" placeholder="مثال: 120" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-solar-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1" data-i18n="lbl_inv_mppt_max">أعلى جهد MPPT Max (V)</label>
+                            <input type="text" id="inv-mppt-max" value="" placeholder="مثال: 450" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-solar-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1" data-i18n="lbl_inv_max_isc">أقصى تيار مدخل Max Isc (A)</label>
+                            <input type="text" id="inv-max-isc" value="" placeholder="مثال: 30" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-solar-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Battery Bank Options (Hidden if On-Grid) -->
+                <div id="battery-section" class="card-box bg-slate-800 p-5 rounded-2xl border border-slate-700/80 shadow-md">
+                    <h2 class="text-lg font-bold text-slate-100 mb-4 flex items-center gap-2 border-b border-slate-700 pb-2">
+                        <i class="fa-solid fa-car-battery text-solar-400"></i>
+                        <span data-i18n="sec_battery_spec">مواصفات بنك البطاريات (Battery Bank)</span>
+                    </h2>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1" data-i18n="lbl_batt_type">نوع البطارية</label>
+                            <select id="batt-type" onchange="handleBatteryTypeChange()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-solar-500">
+                                <option value="lithium" selected>ليثيوم LiFePO4 (90% DoD)</option>
+                                <option value="gel">جل / AGM GEL (50% DoD)</option>
+                                <option value="lead">رصاص Acid (40% DoD)</option>
+                                <option value="custom" data-i18n="opt_custom_dod">مخصص Custom DoD</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1" data-i18n="lbl_batt_dod">عمق التفريغ DoD (%)</label>
+                            <input type="text" id="batt-dod" value="" placeholder="مثال: 90" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-solar-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1" data-i18n="lbl_autonomy">ساعات الاستقلالية (Autonomy)</label>
+                            <input type="text" id="batt-autonomy" value="" placeholder="مثال: 12" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-solar-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1" data-i18n="lbl_bus_voltage">جهد الناقل Bus Voltage (V)</label>
+                            <select id="bus-voltage" onchange="calculateAll()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-solar-500">
+                                <option value="12">12 V</option>
+                                <option value="24">24 V</option>
+                                <option value="48" selected>48 V</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1" data-i18n="lbl_unit_batt_v">جهد البطارية الواحدة (V)</label>
+                            <input type="text" id="unit-batt-v" value="" placeholder="مثال: 12" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-solar-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1" data-i18n="lbl_unit_batt_ah">سعة البطارية الواحدة (Ah)</label>
+                            <input type="text" id="unit-batt-ah" value="" placeholder="مثال: 200" oninput="handleNumericInput(this, calculateAll)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-solar-500">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Column: Outputs, Chart, Technical Analyses (5 Columns) -->
+            <div class="lg:col-span-5 space-y-6">
+
+                <!-- Seasonal Thermal Analysis Chart -->
+                <div class="card-box bg-slate-800 p-5 rounded-2xl border border-slate-700/80 shadow-md">
+                    <h2 class="text-base font-bold text-slate-100 mb-3 flex items-center gap-2 border-b border-slate-700 pb-2">
+                        <i class="fa-solid fa-chart-line text-solar-400"></i>
+                        <span data-i18n="sec_chart_title">تغير جهد السلسلة مع أقصى درجات حرارة موسمية</span>
+                    </h2>
+                    <div class="relative w-full h-64">
+                        <canvas id="seasonalChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Seasonal Thermal Analysis Table -->
+                <div class="card-box bg-slate-800 p-5 rounded-2xl border border-slate-700/80 shadow-md">
+                    <h2 class="text-base font-bold text-slate-100 mb-3 flex items-center gap-2 border-b border-slate-700 pb-2">
+                        <i class="fa-solid fa-table-cells text-solar-400"></i>
+                        <span data-i18n="sec_seasonal_table">التحليل الحراري الموسمي لأقصى الحرارات</span>
+                    </h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-start text-xs">
+                            <thead class="text-slate-400 border-b border-slate-700 bg-slate-900/60">
+                                <tr>
+                                    <th class="p-2 text-start" data-i18n="th_season">الموسم</th>
+                                    <th class="p-2 text-center" data-i18n="th_temp">أقصى حرارة (°C)</th>
+                                    <th class="p-2 text-center">Voc (V)</th>
+                                    <th class="p-2 text-center">Vmp (V)</th>
+                                    <th class="p-2 text-center" data-i18n="th_safety_status">حالة الأمان</th>
+                                </tr>
+                            </thead>
+                            <tbody id="seasonal-tbody" class="divide-y divide-slate-700/50">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Inverter & System Compatibility Summary -->
+                <div class="card-box bg-slate-800 p-5 rounded-2xl border border-slate-700/80 shadow-md">
+                    <h2 class="text-base font-bold text-slate-100 mb-3 flex items-center gap-2 border-b border-slate-700 pb-2">
+                        <i class="fa-solid fa-list-check text-solar-400"></i>
+                        <span data-i18n="sec_compat_check">جدول التوافق والتأثير الفني</span>
+                    </h2>
+                    <div class="space-y-2.5 text-xs" id="compat-checks-container">
+                        <!-- Dynamic checks loaded here -->
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer / Print Signature Block -->
+    <footer class="bg-slate-900 border-t border-slate-800 py-6 mt-10">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
+            <p data-i18n="footer_rights">© 2026 مصمم منظومات الطاقة الشمسية الاحترافي | جميع الحسابات مبنية على المعايير الكهربائية الدولية STC/IEC</p>
+        </div>
+    </footer>
+
+    <!-- Application Logic Script -->
+    <script>
+        // Empty State Data Model
+        let appData = {
+            lang: 'ar',
+            sysType: 'hybrid',
+            psh: 0,
+            effInverter: 95,
+            effBattery: 90,
+            effPanel: 90,
+            iscSafetyFactor: 1.25,
+            loads: [],
+            pv: {
+                pmax: 0,
+                voc: 0,
+                isc: 0,
+                vmp: 0,
+                imp: 0,
+                tcVoc: 0,
+                series: 0,
+                parallel: 0,
+                length: 0,
+                width: 0,
+                shadingFactor: 1.5
+            },
+            temps: {
+                summer: 0,
+                spring: 0,
+                autumn: 0,
+                winter: 0
+            },
+            inverter: {
+                officialPower: 0,
+                maxVdc: 0,
+                mpptMin: 0,
+                mpptMax: 0,
+                maxIsc: 0
+            },
+            battery: {
+                type: 'lithium',
+                dod: 90,
+                autonomy: 0,
+                busV: 48,
+                unitV: 0,
+                unitAh: 0
+            }
+        };
+
+        // Number Translation Helpers
+        function toArabicDigits(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
+        }
+
+        function toEnglishDigits(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+        }
+
+        function formatNum(num, decimals = -1) {
+            let n = parseFloat(num);
+            if (isNaN(n)) n = 0;
+            let str = (decimals >= 0) ? n.toFixed(decimals) : String(num);
+            return appData.lang === 'ar' ? toArabicDigits(str) : toEnglishDigits(str);
+        }
+
+        function handleNumericInput(inputElem, callback) {
+            let rawValue = toEnglishDigits(inputElem.value);
+            // Allow numbers, negative sign, and single decimal point
+            rawValue = rawValue.replace(/[^0-9.-]/g, '');
+            inputElem.dataset.cleanValue = rawValue;
+            if (callback) callback();
+        }
+
+        function updateAllFieldDisplayDigits() {
+            const inputs = document.querySelectorAll('input[type="text"]');
+            inputs.forEach(input => {
+                // Skip inputs inside loads table to avoid cursor jumps while editing
+                if (input.closest('#loads-tbody')) return;
+
+                if (input.dataset.cleanValue !== undefined && input.dataset.cleanValue !== '') {
+                    input.value = appData.lang === 'ar' ? toArabicDigits(input.dataset.cleanValue) : toEnglishDigits(input.dataset.cleanValue);
+                } else if (input.value !== '' && !isNaN(parseFloat(toEnglishDigits(input.value)))) {
+                    const cleanVal = toEnglishDigits(input.value);
+                    input.dataset.cleanValue = cleanVal;
+                    input.value = appData.lang === 'ar' ? toArabicDigits(cleanVal) : toEnglishDigits(cleanVal);
+                }
+            });
+        }
+
+        // Dictionary Translation Database
+        const translations = {
+            ar: {
+                app_title: "مصمم منظومات الطاقة الشمسية",
+                app_subtitle: "Solar PV Professional Designer & Calculator",
+                export: "تصدير JSON",
+                import: "استيراد JSON",
+                print_pdf: "طباعة التقرير (PDF)",
+                kpi_array_power: "القدرة الإجمالية للألواح",
+                kpi_daily_gen: "الإنتاج اليومي للألواح",
+                kpi_array_current: "تيار القصر Isc (مع الأمان)",
+                kpi_batt_cap: "سعة البطاريات",
+                kpi_usable_batt: "السعة الفعالة",
+                kpi_area: "المساحة المطلوبة",
+                kpi_batt_config: "توصيل البطاريات (توالي × توازي)",
+                sec_system_config: "إعدادات المنظومة والموقع",
+                lbl_sys_type: "نوع المنظومة الشمسية",
+                opt_offgrid: "منفصلة عن الشبكة (Off-Grid)",
+                opt_hybrid: "هجينة (Hybrid)",
+                opt_ongrid: "مرتبطة بالشبكة (On-Grid)",
+                lbl_psh: "ساعات الإشعاع الشمسي (PSH)",
+                sec_efficiency_factors: "معاملات الأداء، كفاءة المنظومة، ومعاملات الأمان",
+                lbl_eff_inv: "كفاءة الإنفيرتر (%)",
+                lbl_eff_batt: "كفاءة الشحن/التفريغ (%)",
+                lbl_eff_panel: "كفاءة الألواح (%)",
+                lbl_isc_safety: "معامل أمان تيار Isc",
+                lbl_total_perf_eff: "إجمالي كفاءة الأداء الكلية (PR):",
+                sec_loads: "جدول الأحمال الكهربائية",
+                btn_add_load: "إضافة جهاز",
+                th_device: "اسم الجهاز",
+                th_power: "القدرة (Watt)",
+                th_qty: "العدد",
+                th_hours: "ساعات التشغيل",
+                th_kwh: "الاستهلاك (kWh)",
+                lbl_total_daily_energy: "إجمالي الاستهلاك اليومي:",
+                lbl_peak_power: "القدرة الذروية المطلوبة:",
+                sec_pv_spec: "مواصفات الألواح والتوصيل (STC) والأبعاد",
+                lbl_pv_power: "قدرة اللوح (Wp)",
+                lbl_pv_voc: "جهد الدائرة المفتوحة Voc (V)",
+                lbl_pv_isc: "تيار قصر الدائرة Isc (A)",
+                lbl_pv_vmp: "جهد أقصى قدرة Vmp (V)",
+                lbl_pv_imp: "تيار أقصى قدرة Imp (A)",
+                lbl_pv_tc: "معامل الجهد الحراري (%/°C)",
+                lbl_series_modules: "عدد الألواح بالسلسلة (S)",
+                lbl_parallel_strings: "عدد السلاسل بالتوازي (P)",
+                lbl_pv_length: "طول اللوح (متر)",
+                lbl_pv_width: "عرض اللوح (متر)",
+                lbl_shading_factor: "معامل مسافة تباعد الصفوف لمنع الظلال",
+                sec_temps: "أقصى درجات حرارة متوقعة في الموسم (°C)",
+                temp_summer: "أقصى صيفاً (Summer Max)",
+                temp_spring: "أقصى ربيعاً (Spring Max)",
+                temp_autumn: "أقصى خريفاً (Autumn Max)",
+                temp_winter: "أقصى شتاءً (Winter Max)",
+                sec_inverter_spec: "مواصفات الإنفيرتر (Inverter Specs)",
+                lbl_inv_official_power: "قدرة الانفيرتر الرسمية (kW)",
+                lbl_inv_max_vdc: "أقصى جهد مستمر Max Vdc (V)",
+                lbl_inv_mppt_min: "أقل جهد MPPT Min (V)",
+                lbl_inv_mppt_max: "أعلى جهد MPPT Max (V)",
+                lbl_inv_max_isc: "أقصى تيار مدخل Max Isc (A)",
+                sec_battery_spec: "مواصفات بنك البطاريات (Battery Bank)",
+                opt_custom_dod: "مخصص Custom DoD",
+                lbl_batt_dod: "عمق التفريغ DoD (%)",
+                lbl_autonomy: "ساعات الاستقلالية (Autonomy)",
+                lbl_bus_voltage: "جهد الناقل Bus Voltage (V)",
+                lbl_unit_batt_v: "جهد البطارية الواحدة (V)",
+                lbl_unit_batt_ah: "سعة البطارية الواحدة (Ah)",
+                sec_chart_title: "تغير جهد السلسلة مع أقصى درجات حرارة موسمية",
+                sec_seasonal_table: "التحليل الحراري الموسمي لأقصى الحرارات",
+                th_season: "الموسم",
+                th_temp: "أقصى حرارة (°C)",
+                th_safety_status: "حالة الأمان",
+                sec_compat_check: "جدول التوافق والتأثير الفني",
+                footer_rights: "© 2026 مصمم منظومات الطاقة الشمسية الاحترافي | جميع الحسابات مبنية على المعايير الكهربائية الدولية STC/IEC",
+                season_summer: "الصيف (Max)",
+                season_spring: "الربيع (Max)",
+                season_autumn: "الخريف (Max)",
+                season_winter: "الشتاء (Max)",
+                status_safe: "آمن وتوافق ممتاز",
+                status_danger_high: "خطر: جهد Voc زائد عن حد Vmax MPPT!",
+                status_low_mppt: "تنبيه: أقل من نطاق MPPT",
+                compat_voc_max: "الجهد الأقصى للسلسلة مقابل حد Vmax MPPT",
+                compat_mppt_range: "جهد Vmp الموسمي ضمن نطاق MPPT",
+                compat_isc_max: "تيار السلاسل مع معامل الأمان مقابل الحد الأقصى للإنفيرتر",
+                compat_dc_ac_ratio: "نسبة القدرة DC:AC (الألواح إلى قدرة الإنفيرتر)",
+                compat_array_vs_load: "تغطية الألواح للاستهلاك اليومي",
+                pass: "متوافق وآمن",
+                fail: "غير متوافق"
+            },
+            en: {
+                app_title: "Solar System Designer",
+                app_subtitle: "Solar PV Professional Designer & Calculator",
+                export: "Export JSON",
+                import: "Import JSON",
+                print_pdf: "Print Report (PDF)",
+                kpi_array_power: "Array Peak Power",
+                kpi_daily_gen: "Daily PV Energy",
+                kpi_array_current: "Short-Circuit Isc (with Safety)",
+                kpi_batt_cap: "Battery Capacity",
+                kpi_usable_batt: "Usable Capacity",
+                kpi_area: "Required Area",
+                kpi_batt_config: "Battery Wiring (Series x Parallel)",
+                sec_system_config: "System & Site Configuration",
+                lbl_sys_type: "Solar System Type",
+                opt_offgrid: "Off-Grid System",
+                opt_hybrid: "Hybrid System",
+                opt_ongrid: "On-Grid System",
+                lbl_psh: "Peak Sun Hours (PSH)",
+                sec_efficiency_factors: "Performance Factors, Efficiency & Safety Factors",
+                lbl_eff_inv: "Inverter Efficiency (%)",
+                lbl_eff_batt: "Charge/Discharge Efficiency (%)",
+                lbl_eff_panel: "Panel Efficiency (%)",
+                lbl_isc_safety: "Isc Safety Factor",
+                lbl_total_perf_eff: "Total Performance Ratio (PR):",
+                sec_loads: "Electrical Loads Schedule",
+                btn_add_load: "Add Device",
+                th_device: "Device Name",
+                th_power: "Power (Watt)",
+                th_qty: "Qty",
+                th_hours: "Hours/Day",
+                th_kwh: "Energy (kWh)",
+                lbl_total_daily_energy: "Total Daily Consumption:",
+                lbl_peak_power: "Required Peak Power:",
+                sec_pv_spec: "Solar Panels, Array Specs & Dimensions",
+                lbl_pv_power: "Module Power (Wp)",
+                lbl_pv_voc: "Open-Circuit Voc (V)",
+                lbl_pv_isc: "Short-Circuit Isc (A)",
+                lbl_pv_vmp: "Max Power Vmp (V)",
+                lbl_pv_imp: "Max Power Imp (A)",
+                lbl_pv_tc: "Temp. Coeff. Voc (%/°C)",
+                lbl_series_modules: "Modules in Series (S)",
+                lbl_parallel_strings: "Parallel Strings (P)",
+                lbl_pv_length: "Module Length (m)",
+                lbl_pv_width: "Module Width (m)",
+                lbl_shading_factor: "Row Pitch Shading Factor",
+                sec_temps: "Expected Seasonal Max Temperatures (°C)",
+                temp_summer: "Summer Max Temp",
+                temp_spring: "Spring Max Temp",
+                temp_autumn: "Autumn Max Temp",
+                temp_winter: "Winter Max Temp",
+                sec_inverter_spec: "Inverter Electrical Specifications",
+                lbl_inv_official_power: "Inverter Official Power (kW)",
+                lbl_inv_max_vdc: "Max DC Voltage Max Vdc (V)",
+                lbl_inv_mppt_min: "Min MPPT Voltage (V)",
+                lbl_inv_mppt_max: "Max MPPT Voltage (V)",
+                lbl_inv_max_isc: "Max Input Current Isc (A)",
+                sec_battery_spec: "Battery Bank Specifications",
+                opt_custom_dod: "Custom DoD",
+                lbl_batt_dod: "Depth of Discharge DoD (%)",
+                lbl_autonomy: "Autonomy Hours",
+                lbl_bus_voltage: "Bus Voltage (V)",
+                lbl_unit_batt_v: "Single Battery Voltage (V)",
+                lbl_unit_batt_ah: "Single Battery Capacity (Ah)",
+                sec_chart_title: "Seasonal String Voltage Variation (Max Temps)",
+                sec_seasonal_table: "Seasonal Thermal Analysis of String Voltage",
+                th_season: "Season",
+                th_temp: "Max Temp (°C)",
+                th_safety_status: "Safety Status",
+                sec_compat_check: "Technical Compatibility & Impact",
+                footer_rights: "© 2026 Solar System Designer | Calculations based on STC & IEC Standards",
+                season_summer: "Summer (Max)",
+                season_spring: "Spring (Max)",
+                season_autumn: "Autumn (Max)",
+                season_winter: "Winter (Max)",
+                status_safe: "Safe & Fully Compatible",
+                status_danger_high: "Danger: Voc Exceeds Vmax MPPT!",
+                status_low_mppt: "Warning: Below MPPT Range",
+                compat_voc_max: "Max String Voc vs Vmax MPPT Limit",
+                compat_mppt_range: "Seasonal String Vmp in MPPT Range",
+                compat_isc_max: "Array Isc (w/ Safety Factor) vs Inverter Max Input",
+                compat_dc_ac_ratio: "DC:AC Power Ratio (Array to Inverter Rating)",
+                compat_array_vs_load: "Solar Generation vs Daily Demand",
+                pass: "Pass / Safe",
+                fail: "Fail / Attention"
+            }
+        };
+
+        let seasonalChart = null;
+
+        window.onload = function() {
+            renderLoadsTable();
+            initChart();
+            calculateAll();
+        };
+
+        function toggleLanguage() {
+            appData.lang = appData.lang === 'ar' ? 'en' : 'ar';
+            document.documentElement.lang = appData.lang;
+            document.documentElement.dir = appData.lang === 'ar' ? 'rtl' : 'ltr';
+            document.getElementById('lang-indicator').innerText = appData.lang === 'ar' ? 'EN' : 'AR';
+
+            // Apply translations to data-i18n elements
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[appData.lang][key]) {
+                    el.innerText = translations[appData.lang][key];
+                }
+            });
+
+            // Re-render components and digits
+            renderLoadsTable();
+            calculateAll();
+        }
+
+        function handleSystemTypeChange() {
+            const sysType = document.getElementById('sys-type').value;
+            appData.sysType = sysType;
+            const battSec = document.getElementById('battery-section');
+            if (sysType === 'on-grid') {
+                battSec.classList.add('hidden');
+            } else {
+                battSec.classList.remove('hidden');
+            }
+            calculateAll();
+        }
+
+        function handleBatteryTypeChange() {
+            const bType = document.getElementById('batt-type').value;
+            const dodInput = document.getElementById('batt-dod');
+            let dodVal = 90;
+            if (bType === 'lithium') dodVal = 90;
+            else if (bType === 'gel') dodVal = 50;
+            else if (bType === 'lead') dodVal = 40;
+            else dodVal = parseFloat(toEnglishDigits(dodInput.value)) || 0;
+            
+            dodInput.dataset.cleanValue = dodVal;
+            dodInput.value = formatNum(dodVal);
+            calculateAll();
+        }
+
+        function renderLoadsTable() {
+            const tbody = document.getElementById('loads-tbody');
+            tbody.innerHTML = '';
+
+            appData.loads.forEach((load, idx) => {
+                const tr = document.createElement('tr');
+                const dailyKwh = ((load.power * load.qty * load.hours) / 1000);
+                
+                tr.innerHTML = `
+                    <td class="p-2">
+                        <input type="text" value="${load.name}" oninput="updateLoadField(${idx}, 'name', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-100">
+                    </td>
+                    <td class="p-2 text-center">
+                        <input type="text" value="${load.power ? formatNum(load.power) : ''}" placeholder="0" oninput="handleNumericInput(this, () => updateLoadField(${idx}, 'power', this.dataset.cleanValue))" class="w-20 bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-center text-slate-100">
+                    </td>
+                    <td class="p-2 text-center">
+                        <input type="text" value="${load.qty ? formatNum(load.qty) : ''}" placeholder="0" oninput="handleNumericInput(this, () => updateLoadField(${idx}, 'qty', this.dataset.cleanValue))" class="w-14 bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-center text-slate-100">
+                    </td>
+                    <td class="p-2 text-center">
+                        <input type="text" value="${load.hours ? formatNum(load.hours) : ''}" placeholder="0" oninput="handleNumericInput(this, () => updateLoadField(${idx}, 'hours', this.dataset.cleanValue))" class="w-14 bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-center text-slate-100">
+                    </td>
+                    <td class="p-2 text-center font-bold text-solar-400" id="load-kwh-${idx}">${formatNum(dailyKwh, 2)}</td>
+                    <td class="p-2 text-center no-print">
+                        <button onclick="removeLoadRow(${idx})" class="text-rose-400 hover:text-rose-300 transition">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function addLoadRow() {
+            appData.loads.push({
+                id: Date.now(),
+                name: appData.lang === 'ar' ? 'جهاز جديد' : 'New Appliance',
+                power: 0,
+                qty: 0,
+                hours: 0
+            });
+            renderLoadsTable();
+            calculateAll();
+        }
+
+        function removeLoadRow(index) {
+            appData.loads.splice(index, 1);
+            renderLoadsTable();
+            calculateAll();
+        }
+
+        function updateLoadField(index, field, value) {
+            if (field === 'name') {
+                appData.loads[index].name = value;
+            } else {
+                appData.loads[index][field] = parseFloat(toEnglishDigits(value)) || 0;
+                // Update row consumption without re-rendering the whole table
+                const load = appData.loads[index];
+                const dailyKwh = ((load.power * load.qty * load.hours) / 1000);
+                const kwhCell = document.getElementById(`load-kwh-${index}`);
+                if (kwhCell) kwhCell.innerText = formatNum(dailyKwh, 2);
+            }
+            calculateAll();
+        }
+
+        function getCleanVal(elementId) {
+            const el = document.getElementById(elementId);
+            if (!el) return 0;
+            const val = el.dataset.cleanValue !== undefined ? el.dataset.cleanValue : toEnglishDigits(el.value);
+            return parseFloat(val) || 0;
+        }
+
+        function syncInputsWithData() {
+            appData.psh = getCleanVal('psh-input');
+            appData.effInverter = getCleanVal('eff-inverter') || 95;
+            appData.effBattery = getCleanVal('eff-battery') || 90;
+            appData.effPanel = getCleanVal('eff-panel') || 90;
+            appData.iscSafetyFactor = getCleanVal('isc-safety-factor') || 1.25;
+
+            appData.pv.pmax = getCleanVal('pv-pmax');
+            appData.pv.voc = getCleanVal('pv-voc');
+            appData.pv.isc = getCleanVal('pv-isc');
+            appData.pv.vmp = getCleanVal('pv-vmp');
+            appData.pv.imp = getCleanVal('pv-imp');
+            appData.pv.tcVoc = getCleanVal('pv-tc-voc');
+            appData.pv.series = getCleanVal('pv-series');
+            appData.pv.parallel = getCleanVal('pv-parallel');
+            appData.pv.length = getCleanVal('pv-length');
+            appData.pv.width = getCleanVal('pv-width');
+            appData.pv.shadingFactor = getCleanVal('pv-shading-factor') || 1.5;
+
+            appData.temps.summer = getCleanVal('temp-summer');
+            appData.temps.spring = getCleanVal('temp-spring');
+            appData.temps.autumn = getCleanVal('temp-autumn');
+            appData.temps.winter = getCleanVal('temp-winter');
+
+            appData.inverter.officialPower = getCleanVal('inv-official-power');
+            appData.inverter.maxVdc = getCleanVal('inv-max-vdc');
+            appData.inverter.mpptMin = getCleanVal('inv-mppt-min');
+            appData.inverter.mpptMax = getCleanVal('inv-mppt-max');
+            appData.inverter.maxIsc = getCleanVal('inv-max-isc');
+
+            appData.battery.dod = getCleanVal('batt-dod');
+            appData.battery.autonomy = getCleanVal('batt-autonomy');
+            appData.battery.busV = parseFloat(document.getElementById('bus-voltage').value) || 48;
+            appData.battery.unitV = getCleanVal('unit-batt-v');
+            appData.battery.unitAh = getCleanVal('unit-batt-ah');
+        }
+
+        function calculateAll() {
+            syncInputsWithData();
+            updateAllFieldDisplayDigits();
+
+            // Calculate total Performance Ratio (PR) incorporating panel efficiency and inverter/system factors
+            const effInvRatio = appData.effInverter / 100;
+            const effBattRatio = appData.effBattery / 100;
+            const effPanelRatio = appData.effPanel / 100;
+            
+            // Total system performance efficiency (PR) breakdown product for realistic yield calculation
+            const totalPR = effInvRatio * effPanelRatio * 0.95; 
+            document.getElementById('total-perf-eff-val').innerText = formatNum(totalPR, 3);
+            document.getElementById('kpi-gen-eff').innerText = appData.lang === 'ar' ? `كفاءة الأداء الكلية: ${formatNum(totalPR * 100, 1)}%` : `Total Performance Ratio: ${formatNum(totalPR * 100, 1)}%`;
+
+            // 1. Calculate Load Requirements
+            let totalDailyWh = 0;
+            let peakPowerWatts = 0;
+            appData.loads.forEach(l => {
+                totalDailyWh += (l.power * l.qty * l.hours);
+                peakPowerWatts += (l.power * l.qty);
+            });
+            const totalDailyKwh = totalDailyWh / 1000;
+            const peakPowerKw = peakPowerWatts / 1000;
+
+            document.getElementById('total-daily-kwh').innerText = formatNum(totalDailyKwh, 2);
+            document.getElementById('total-peak-kw').innerText = formatNum(peakPowerKw, 2);
+
+            // 2. Solar Array Calculation
+            const totalModules = appData.pv.series * appData.pv.parallel;
+            const totalArrayPowerWp = totalModules * appData.pv.pmax;
+            const totalArrayPowerKwp = totalArrayPowerWp / 1000;
+            
+            // Apply Safety Factor to Array Isc
+            const arrayRawIsc = appData.pv.parallel * appData.pv.isc;
+            const arrayTotalIscWithSafety = arrayRawIsc * appData.iscSafetyFactor;
+            const arrayTotalImp = appData.pv.parallel * appData.pv.imp;
+
+            // Daily Solar Generation Result Calculation using dynamic PR and panel efficiency
+            const dailySolarGenKwh = totalArrayPowerKwp * appData.psh * totalPR;
+
+            document.getElementById('kpi-array-power').innerHTML = `${formatNum(totalArrayPowerKwp, 2)} <span class="text-xs font-normal text-slate-400">kWp</span>`;
+            document.getElementById('kpi-daily-gen').innerHTML = `${formatNum(dailySolarGenKwh, 2)} <span class="text-xs font-normal text-slate-400">kWh</span>`;
+            document.getElementById('kpi-total-modules').innerText = `${formatNum(totalModules)} ${appData.lang === 'ar' ? 'لوح شمسي' : 'Modules'}`;
+            document.getElementById('kpi-array-isc').innerHTML = `${formatNum(arrayTotalIscWithSafety, 1)} <span class="text-xs font-normal text-slate-400">A</span>`;
+            document.getElementById('kpi-imp-val').innerText = `Raw Isc: ${formatNum(arrayRawIsc, 1)}A (SF: ${formatNum(appData.iscSafetyFactor)})`;
+
+            // Real-World Required Area Calculation
+            let areaRequired = 0;
+            if (appData.pv.length > 0 && appData.pv.width > 0) {
+                const singleModuleArea = appData.pv.length * appData.pv.width;
+                areaRequired = totalModules * singleModuleArea * appData.pv.shadingFactor;
+                document.getElementById('kpi-area-est').innerText = appData.lang === 'ar' ? `حقيقية (${formatNum(singleModuleArea, 2)} م²/لوح + تباعد)` : `Real (${formatNum(singleModuleArea, 2)}m²/mod + pitch)`;
+            } else {
+                areaRequired = totalModules * 2.0 * appData.pv.shadingFactor;
+                document.getElementById('kpi-area-est').innerText = appData.lang === 'ar' ? 'تقديري (2 م²/لوح + تباعد)' : 'Est (2m²/mod + pitch)';
+            }
+            document.getElementById('kpi-area').innerHTML = `${formatNum(areaRequired, 1)} <span class="text-xs font-normal text-slate-400">m²</span>`;
+
+            // 3. Battery Calculation including Charging/Discharging Efficiency & Inverter Efficiency factors
+            if (appData.sysType !== 'on-grid') {
+                const autonomyDays = appData.battery.autonomy / 24;
+                const usableEnergyKwh = totalDailyKwh * autonomyDays;
+                
+                // Factoring battery round-trip efficiency and inverter efficiency into the required battery storage sizing
+                const effectiveEffFactor = effBattRatio * effInvRatio;
+                const totalEnergyKwh = (appData.battery.dod > 0 && effectiveEffFactor > 0) 
+                    ? (usableEnergyKwh / ((appData.battery.dod / 100) * effectiveEffFactor)) 
+                    : 0;
+                
+                const totalAhAtBus = appData.battery.busV > 0 ? ((totalEnergyKwh * 1000) / appData.battery.busV) : 0;
+
+                const battInSeries = appData.battery.unitV > 0 ? Math.ceil(appData.battery.busV / appData.battery.unitV) : 0;
+                const stringCapAh = appData.battery.unitAh;
+                const battInParallel = stringCapAh > 0 ? Math.ceil(totalAhAtBus / stringCapAh) : 0;
+                const totalBatteries = battInSeries * battInParallel;
+
+                document.getElementById('kpi-batt-cap').innerHTML = `${formatNum(totalEnergyKwh, 2)} <span class="text-xs font-normal text-slate-400">kWh</span>`;
+                document.getElementById('kpi-batt-ah').innerText = `${formatNum(Math.round(totalAhAtBus))} Ah @ ${formatNum(appData.battery.busV)}V`;
+                document.getElementById('kpi-usable-batt').innerHTML = `${formatNum(usableEnergyKwh, 2)} <span class="text-xs font-normal text-slate-400">kWh</span>`;
+                document.getElementById('kpi-dod-val').innerText = `DoD: ${formatNum(appData.battery.dod)}% (Eff: ${formatNum(effectiveEffFactor * 100, 1)}%)`;
+
+                // Display clear battery connection format (Series x Parallel) & details
+                if (battInSeries > 0 || battInParallel > 0) {
+                    document.getElementById('kpi-batt-config').innerText = `${formatNum(battInSeries)}S × ${formatNum(battInParallel)}P`;
+                    document.getElementById('kpi-batt-count').innerText = appData.lang === 'ar'
+                        ? `المجموع: ${formatNum(totalBatteries)} بطارية (${formatNum(battInSeries)} توالي × ${formatNum(battInParallel)} توازي)`
+                        : `Total: ${formatNum(totalBatteries)} units (${formatNum(battInSeries)} Series × ${formatNum(battInParallel)} Parallel)`;
+                } else {
+                    document.getElementById('kpi-batt-config').innerText = '0S × 0P';
+                    document.getElementById('kpi-batt-count').innerText = appData.lang === 'ar' ? 'المجموع: 0 بطارية' : 'Total: 0 units';
+                }
+            } else {
+                document.getElementById('kpi-batt-cap').innerText = 'N/A';
+                document.getElementById('kpi-usable-batt').innerText = 'N/A';
+                document.getElementById('kpi-batt-config').innerText = 'N/A';
+                document.getElementById('kpi-batt-count').innerText = 'N/A';
+            }
+
+            // 4. Seasonal Thermal Calculation (Maximum Temperatures Evaluation)
+            const seasonalData = computeSeasonalVoltage();
+            renderSeasonalTable(seasonalData);
+            updateChart(seasonalData);
+
+            // 5. Check Technical Compatibility and Update Alerts
+            evaluateCompatibility(seasonalData, totalDailyKwh, arrayTotalIscWithSafety, dailySolarGenKwh, totalArrayPowerKwp);
+        }
+
+        function computeSeasonalVoltage() {
+            const seasons = [
+                { key: 'season_summer', temp: appData.temps.summer },
+                { key: 'season_spring', temp: appData.temps.spring },
+                { key: 'season_autumn', temp: appData.temps.autumn },
+                { key: 'season_winter', temp: appData.temps.winter }
+            ];
+
+            return seasons.map(s => {
+                const deltaT = s.temp - 25; // Standard Test Conditions (STC) = 25°C
+                // Thermal voltage formula
+                const unitVocT = appData.pv.voc * (1 + (appData.pv.tcVoc / 100) * deltaT);
+                const unitVmpT = appData.pv.vmp * (1 + (appData.pv.tcVoc / 100) * deltaT);
+
+                const stringVoc = unitVocT * appData.pv.series;
+                const stringVmp = unitVmpT * appData.pv.series;
+
+                let status = 'safe';
+                if (appData.inverter.mpptMax > 0 && stringVoc > appData.inverter.mpptMax) {
+                    status = 'danger';
+                } else if (appData.inverter.mpptMin > 0 && stringVmp < appData.inverter.mpptMin) {
+                    status = 'low_mppt';
+                } else if (appData.inverter.mpptMax > 0 && stringVmp > appData.inverter.mpptMax) {
+                    status = 'high_mppt';
+                }
+
+                return {
+                    nameKey: s.key,
+                    temp: s.temp,
+                    voc: stringVoc,
+                    vmp: stringVmp,
+                    status: status
+                };
+            });
+        }
+
+        function renderSeasonalTable(seasonalData) {
+            const tbody = document.getElementById('seasonal-tbody');
+            tbody.innerHTML = '';
+
+            seasonalData.forEach(d => {
+                const tr = document.createElement('tr');
+                let badgeHtml = '';
+                if (d.status === 'safe') {
+                    badgeHtml = `<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-400 font-semibold border border-emerald-500/30">${translations[appData.lang].status_safe}</span>`;
+                } else if (d.status === 'danger') {
+                    badgeHtml = `<span class="px-2 py-0.5 rounded text-[10px] bg-rose-500/20 text-rose-400 font-semibold border border-rose-500/30">${translations[appData.lang].status_danger_high}</span>`;
+                } else {
+                    badgeHtml = `<span class="px-2 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-400 font-semibold border border-amber-500/30">${translations[appData.lang].status_low_mppt}</span>`;
+                }
+
+                tr.innerHTML = `
+                    <td class="p-2 font-semibold text-slate-200">${translations[appData.lang][d.nameKey]}</td>
+                    <td class="p-2 text-center text-slate-300">${formatNum(d.temp)}°C</td>
+                    <td class="p-2 text-center font-bold text-amber-400">${formatNum(d.voc, 1)} V</td>
+                    <td class="p-2 text-center font-bold text-teal-400">${formatNum(d.vmp, 1)} V</td>
+                    <td class="p-2 text-center">${badgeHtml}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('seasonalChart').getContext('2d');
+            seasonalChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'String Voc (Open Circuit)',
+                            data: [],
+                            borderColor: '#facc15',
+                            backgroundColor: 'rgba(250, 204, 21, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'String Vmp (Operating)',
+                            data: [],
+                            borderColor: '#14b8a6',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Inverter Max MPPT Limit',
+                            data: [],
+                            borderColor: '#f43f5e',
+                            borderWidth: 2,
+                            borderDash: [2, 2],
+                            pointRadius: 0,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#94a3b8', font: { size: 10 } }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#94a3b8', font: { size: 10 } },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                        },
+                        y: {
+                            ticks: { color: '#94a3b8', font: { size: 10 } },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            title: { display: true, text: 'Voltage (V)', color: '#64748b', font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateChart(seasonalData) {
+            if (!seasonalChart) return;
+            const labels = seasonalData.map(s => `${translations[appData.lang][s.nameKey]} (${formatNum(s.temp)}°C)`);
+            const vocVals = seasonalData.map(s => s.voc);
+            const vmpVals = seasonalData.map(s => s.vmp);
+            const maxMpptVals = seasonalData.map(() => appData.inverter.mpptMax);
+
+            seasonalChart.data.labels = labels;
+            seasonalChart.data.datasets[0].data = vocVals;
+            seasonalChart.data.datasets[1].data = vmpVals;
+            seasonalChart.data.datasets[2].data = maxMpptVals;
+            seasonalChart.update();
+        }
+
+        function evaluateCompatibility(seasonalData, totalDailyKwh, arrayIscWithSafety, dailySolarGenKwh, totalArrayPowerKwp) {
+            const issues = [];
+            const checksContainer = document.getElementById('compat-checks-container');
+            checksContainer.innerHTML = '';
+
+            // Find highest Voc among all seasonal max temps
+            const highestVoc = Math.max(...seasonalData.map(s => s.voc));
+
+            const isVocSafe = appData.inverter.mpptMax > 0 ? (highestVoc <= appData.inverter.mpptMax) : true;
+            if (!isVocSafe && highestVoc > 0) {
+                issues.push(appData.lang === 'ar' 
+                    ? `جهد الدائرة المفتوحة للسلسلة (${formatNum(highestVoc, 1)}V) يتجاوز الحد الأعلى لنطاق MPPT للإنفيرتر (${formatNum(appData.inverter.mpptMax)}V)! قم بتقليل عدد الألواح بالتوالي (S).`
+                    : `String open-circuit voltage (${formatNum(highestVoc, 1)}V) exceeds inverter max MPPT limit (${formatNum(appData.inverter.mpptMax)}V)! Reduce modules in series (S).`);
+            }
+
+            const isIscSafe = appData.inverter.maxIsc > 0 ? (arrayIscWithSafety <= appData.inverter.maxIsc) : true;
+            if (!isIscSafe && arrayIscWithSafety > 0) {
+                issues.push(appData.lang === 'ar'
+                    ? `إجمالي تيار الألواح مع معامل الأمان (${formatNum(arrayIscWithSafety, 1)}A) يتجاوز أقصى تيار مسموح للإنفيرتر (${formatNum(appData.inverter.maxIsc)}A)!`
+                    : `Total PV array Isc with safety factor (${formatNum(arrayIscWithSafety, 1)}A) exceeds inverter max input current (${formatNum(appData.inverter.maxIsc)}A)!`);
+            }
+
+            // DC:AC Ratio calculation and check
+            let dcAcRatio = 0;
+            let isDcAcSafe = true;
+            if (appData.inverter.officialPower > 0) {
+                dcAcRatio = totalArrayPowerKwp / appData.inverter.officialPower;
+                // Standard optimal DC:AC ratio is typically between 1.0 to 1.35
+                if (dcAcRatio > 1.45 || dcAcRatio < 0.7) {
+                    isDcAcSafe = false;
+                }
+            }
+            if (!isDcAcSafe && appData.inverter.officialPower > 0) {
+                issues.push(appData.lang === 'ar'
+                    ? `نسبة DC:AC الحالية (${formatNum(dcAcRatio, 2)}) خارج النطاق الموصى به عادة (0.8 إلى 1.35).`
+                    : `Current DC:AC ratio (${formatNum(dcAcRatio, 2)}) is outside the recommended range (0.8 to 1.35).`);
+            }
+
+            const isGenSufficient = totalDailyKwh > 0 ? (dailySolarGenKwh >= totalDailyKwh) : true;
+            if (!isGenSufficient && totalDailyKwh > 0) {
+                issues.push(appData.lang === 'ar'
+                    ? `إنتاج الألواح المتوقع (${formatNum(dailySolarGenKwh, 1)} kWh) أقل من الاستهلاك اليومي المطلوب (${formatNum(totalDailyKwh, 1)} kWh).`
+                    : `Estimated daily solar generation (${formatNum(dailySolarGenKwh, 1)} kWh) is below daily energy demand (${formatNum(totalDailyKwh, 1)} kWh).`);
+            }
+
+            // Render Compatibility Status Banner
+            const banner = document.getElementById('system-status-banner');
+            const statusIconContainer = document.getElementById('status-icon-container');
+            const statusIcon = document.getElementById('status-icon');
+            const statusTitle = document.getElementById('status-title');
+            const statusDesc = document.getElementById('status-description');
+            const issuesList = document.getElementById('status-issues-list');
+
+            if (issues.length === 0) {
+                banner.className = "mb-6 p-4 rounded-xl border bg-emerald-950/40 border-emerald-500/40 text-emerald-200 flex items-start gap-4";
+                statusIconContainer.className = "p-2 rounded-lg text-xl flex-shrink-0 bg-emerald-500/20 text-emerald-400";
+                statusIcon.className = "fa-solid fa-circle-check";
+                statusTitle.innerText = appData.lang === 'ar' ? "المنظومة متوافقة وآمنة للتركيب" : "System Design Compatible & Safe";
+                statusDesc.innerText = appData.lang === 'ar' ? "جميع القيم الحسابية وتطابق الجهد والـ MPPT وضبط أمان التيار ونسبة DC:AC ضمن حدود التشغيل الآمنة." : "All calculated electrical parameters, voltage matching, safety current factors, and DC:AC ratios are within safe operation ranges.";
+                issuesList.classList.add('hidden');
+            } else {
+                banner.className = "mb-6 p-4 rounded-xl border bg-rose-950/40 border-rose-500/40 text-rose-200 flex items-start gap-4";
+                statusIconContainer.className = "p-2 rounded-lg text-xl flex-shrink-0 bg-rose-500/20 text-rose-400";
+                statusIcon.className = "fa-solid fa-triangle-exclamation";
+                statusTitle.innerText = appData.lang === 'ar' ? "تنبيه: توجد أخطاء في التوافق الفني" : "Warning: Design Compatibility Issues Found";
+                statusDesc.innerText = appData.lang === 'ar' ? "يرجى مراجعة وتعديل قيم المدخلات لتفادي المخاطر التالية:" : "Please adjust input parameters to resolve the following risks:";
+                
+                issuesList.innerHTML = issues.map(i => `<li>${i}</li>`).join('');
+                issuesList.classList.remove('hidden');
+            }
+
+            // Render Detailed Compatibility Items in Checklist
+            renderCheckItem(translations[appData.lang].compat_voc_max, `${formatNum(highestVoc, 1)}V / ${formatNum(appData.inverter.mpptMax)}V`, isVocSafe);
+            renderCheckItem(translations[appData.lang].compat_isc_max, `${formatNum(arrayIscWithSafety, 1)}A / ${formatNum(appData.inverter.maxIsc)}A`, isIscSafe);
+            if (appData.inverter.officialPower > 0) {
+                renderCheckItem(translations[appData.lang].compat_dc_ac_ratio, `${formatNum(dcAcRatio, 2)} : 1`, isDcAcSafe);
+            }
+            renderCheckItem(translations[appData.lang].compat_array_vs_load, `${formatNum(dailySolarGenKwh, 1)} / ${formatNum(totalDailyKwh, 1)} kWh`, isGenSufficient);
+        }
+
+        function renderCheckItem(title, valueStr, isPassed) {
+            const container = document.getElementById('compat-checks-container');
+            const div = document.createElement('div');
+            div.className = "flex items-center justify-between p-2.5 rounded-lg bg-slate-900/60 border border-slate-700/60";
+            
+            const passBadge = isPassed 
+                ? `<span class="text-xs text-emerald-400 font-bold flex items-center gap-1"><i class="fa-solid fa-check"></i> ${translations[appData.lang].pass}</span>`
+                : `<span class="text-xs text-rose-400 font-bold flex items-center gap-1"><i class="fa-solid fa-xmark"></i> ${translations[appData.lang].fail}</span>`;
+
+            div.innerHTML = `
+                <div>
+                    <div class="font-semibold text-slate-200">${title}</div>
+                    <div class="text-[11px] text-slate-400">${valueStr}</div>
+                </div>
+                <div>${passBadge}</div>
+            `;
+            container.appendChild(div);
+        }
+
+        function triggerPrint() {
+            window.print();
+        }
+
+        function exportJSON() {
+            syncInputsWithData();
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", `solar_system_design_${Date.now()}.json`);
+            document.body.appendChild(dlAnchorElem);
+            dlAnchorElem.click();
+            dlAnchorElem.remove();
+        }
+
+        function importJSON(event) {
+            const fileReader = new FileReader();
+            fileReader.onload = function(e) {
+                try {
+                    const parsedData = JSON.parse(e.target.result);
+                    if (parsedData && parsedData.pv && parsedData.inverter) {
+                        appData = parsedData;
+                        
+                        // Populate UI inputs
+                        document.getElementById('sys-type').value = appData.sysType || 'hybrid';
+                        document.getElementById('psh-input').value = appData.psh ? formatNum(appData.psh) : '';
+                        
+                        document.getElementById('eff-inverter').value = appData.effInverter !== undefined ? formatNum(appData.effInverter) : '95';
+                        document.getElementById('eff-battery').value = appData.effBattery !== undefined ? formatNum(appData.effBattery) : '90';
+                        document.getElementById('eff-panel').value = appData.effPanel !== undefined ? formatNum(appData.effPanel) : '90';
+                        document.getElementById('isc-safety-factor').value = appData.iscSafetyFactor !== undefined ? formatNum(appData.iscSafetyFactor) : '1.25';
+
+                        document.getElementById('pv-pmax').value = appData.pv.pmax ? formatNum(appData.pv.pmax) : '';
+                        document.getElementById('pv-voc').value = appData.pv.voc ? formatNum(appData.pv.voc) : '';
+                        document.getElementById('pv-isc').value = appData.pv.isc ? formatNum(appData.pv.isc) : '';
+                        document.getElementById('pv-vmp').value = appData.pv.vmp ? formatNum(appData.pv.vmp) : '';
+                        document.getElementById('pv-imp').value = appData.pv.imp ? formatNum(appData.pv.imp) : '';
+                        document.getElementById('pv-tc-voc').value = appData.pv.tcVoc ? formatNum(appData.pv.tcVoc) : '';
+                        document.getElementById('pv-series').value = appData.pv.series ? formatNum(appData.pv.series) : '';
+                        document.getElementById('pv-parallel').value = appData.pv.parallel ? formatNum(appData.pv.parallel) : '';
+                        document.getElementById('pv-length').value = appData.pv.length ? formatNum(appData.pv.length) : '';
+                        document.getElementById('pv-width').value = appData.pv.width ? formatNum(appData.pv.width) : '';
+                        document.getElementById('pv-shading-factor').value = appData.pv.shadingFactor ? formatNum(appData.pv.shadingFactor) : '';
+
+                        document.getElementById('temp-summer').value = appData.temps.summer ? formatNum(appData.temps.summer) : '';
+                        document.getElementById('temp-spring').value = appData.temps.spring ? formatNum(appData.temps.spring) : '';
+                        document.getElementById('temp-autumn').value = appData.temps.autumn ? formatNum(appData.unsaved || appData.temps.autumn) : '';
+                        document.getElementById('temp-winter').value = appData.temps.winter ? formatNum(appData.temps.winter) : '';
+
+                        document.getElementById('inv-official-power').value = appData.inverter.officialPower ? formatNum(appData.inverter.officialPower) : '';
+                        document.getElementById('inv-max-vdc').value = appData.inverter.maxVdc ? formatNum(appData.inverter.maxVdc) : '';
+                        document.getElementById('inv-mppt-min').value = appData.inverter.mpptMin ? formatNum(appData.inverter.mpptMin) : '';
+                        document.getElementById('inv-mppt-max').value = appData.inverter.mpptMax ? formatNum(appData.inverter.mpptMax) : '';
+                        document.getElementById('inv-max-isc').value = appData.inverter.maxIsc ? formatNum(appData.inverter.maxIsc) : '';
+
+                        if (appData.battery) {
+                            document.getElementById('batt-type').value = appData.battery.type || 'lithium';
+                            document.getElementById('batt-dod').value = appData.battery.dod ? formatNum(appData.battery.dod) : '';
+                            document.getElementById('batt-autonomy').value = appData.battery.autonomy ? formatNum(appData.battery.autonomy) : '';
+                            document.getElementById('bus-voltage').value = appData.battery.busV || 48;
+                            document.getElementById('unit-batt-v').value = appData.battery.unitV ? formatNum(appData.battery.unitV) : '';
+                            document.getElementById('unit-batt-ah').value = appData.battery.unitAh ? formatNum(appData.battery.unitAh) : '';
+                        }
+
+                        renderLoadsTable();
+                        handleSystemTypeChange();
+                        calculateAll();
+                    }
+                } catch (err) {
+                    alert("خطأ في قراءة ملف JSON / Invalid JSON file!");
+                }
+            };
+            fileReader.readAsText(event.target.files[0]);
+        }
+    </script>
+</body>
+</html>
